@@ -1,7 +1,7 @@
 package com.mybikelog.api.controller;
 
-import com.mybikelog.api.dto.RideDTO;
-import com.mybikelog.api.dto.RidePageDTO;
+import com.mybikelog.api.dto.RideAndPetrolDTO;
+import com.mybikelog.api.dto.PageDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,16 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class RidesController {
 
     @GetMapping
-    public ResponseEntity<RidePageDTO> getRides(@PathVariable String bikeId,
-                                                @RequestParam(required = false)  String month,
-                                                @RequestParam(required = false)  String page,
-                                                @RequestParam(required = false)  String size){
+    public ResponseEntity<PageDTO> getRides(@PathVariable String bikeId,
+                                            @RequestParam(required = false)  String month,
+                                            @RequestParam(required = false)  String page,
+                                            @RequestParam(required = false)  String size){
         return null;
     }
 
     @PostMapping
-    public ResponseEntity<RideDTO> addRide(@PathVariable String bikeId,
-                                           @RequestBody RideDTO rideRequest){
+    public ResponseEntity<RideAndPetrolDTO> addRide(@PathVariable String bikeId,
+                                                    @RequestBody RideAndPetrolDTO rideRequest){
         return null;
     }
 
