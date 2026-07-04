@@ -1,0 +1,1470 @@
+openapi: 3.0.3
+info:
+  title: BikeLog API
+  description: >
+    REST API contract for the BikeLog application (migrated from a static
+    localStorage-based HTML app to a multi-user Spring Boot + MySQL backend).
+    Supports Google OAuth 2.0 login, JWT-secured access, multiple bikes per
+    user, ride/fuel/maintenance tracking, and pre-computed dashboard statistics.
+  version: 1.0.0
+servers:
+  - url: https://api.bikelog.example.com/api/v1
+    description: Production
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Google OAuth 2.0 login and JWT session management
+  - name: Users
+    description: Current user profile and preferences
+  - name: Bikes
+    description: Vehicle (bike) management — a user can own multiple bikes
+  - name: Rides
+    description: Ride / odometer log entries
+  - name: Petrol
+    description: Fuel fill-up entries
+  - name: Oil Changes
+    description: Engine oil change records
+  - name: Tyre Checks
+    description: Tyre pressure check records
+  - name: Services
+    description: Workshop / service history records
+  - name: Dashboard & Stats
+    description: Pre-computed monthly and overall statistics
+  - name: Export
+    description: Full data export
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ───────────────────────── AUTH ─────────────────────────
+  /auth/google/login:
+    get:
+      tags: [Auth]
+      summary: Start Google OAuth 2.0 login
+      description: >
+        Redirects the browser to Google's OAuth consent screen. Not called
+        via fetch/XHR — the frontend should navigate the browser to this URL
+        (e.g. `window.location.href = ...`).
+      security: []
+      parameters:
+        - name: redirectUri
+          in: query
+          required: false
+          description: Frontend URL to return to after login completes.
+          schema:
+            type: string
+            format: uri
+      responses:
+        '302':
+          description: Redirect to Google's consent screen.
+
+  /auth/google/callback:
+    get:
+      tags: [Auth]
+      summary: Google OAuth 2.0 callback
+      description: >
+        Google redirects here after user consent. The backend exchanges the
+        authorization code, creates/updates the user record, issues a JWT
+        access token and refresh token, then redirects to the frontend with
+        the tokens (e.g. as query params or an HttpOnly cookie, depending on
+        implementation).
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to frontend with tokens attached.
+        '401':
+          description: OAuth exchange failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange a refresh token for a new access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New token pair issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          description: Refresh token invalid or expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Invalidate the current refresh token
+      responses:
+        '204':
+          description: Logged out successfully.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ───────────────────────── USERS ─────────────────────────
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get the current authenticated user's profile
+      responses:
+        '200':
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [Users]
+      summary: Update current user preferences (e.g. active bike)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                activeBikeId:
+                  type: string
+                  format: uuid
+                  description: The bike the frontend should default to on load.
+      responses:
+        '200':
+          description: Updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: activeBikeId does not belong to the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ───────────────────────── BIKES ─────────────────────────
+  /bikes:
+    get:
+      tags: [Bikes]
+      summary: List all bikes owned by the current user
+      responses:
+        '200':
+          description: List of bikes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bike'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Bikes]
+      summary: Add a new bike
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BikeCreateRequest'
+      responses:
+        '201':
+          description: Bike created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bike'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /bikes/{bikeId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Bikes]
+      summary: Get a single bike
+      responses:
+        '200':
+          description: Bike details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bike'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Bikes]
+      summary: Update a bike's details
+      description: >
+        Note: `initialOdo` should generally only be changed before any rides
+        or petrol entries exist for the bike. Servers should reject changes
+        that would make `initialOdo` greater than any recorded odometer value.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BikeUpdateRequest'
+      responses:
+        '200':
+          description: Updated bike.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bike'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Bikes]
+      summary: Delete a bike and all its associated records
+      responses:
+        '204':
+          description: Bike deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────── RIDES ─────────────────────────
+  /rides/{bikeId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Rides]
+      summary: List rides for a bike
+      parameters:
+        - name: month
+          in: query
+          description: Filter to a specific month, format YYYY-MM.
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated list of rides, newest first. Each ride includes
+            the computed distance covered since the previous odometer reading.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RidePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Rides]
+      summary: Log a new ride
+      description: >
+        `odo` must be greater than or equal to the bike's current total
+        odometer (max of initialOdo, all ride odo, and all petrol-entry odo
+        values). Violations return 409 Conflict.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RideCreateRequest'
+      responses:
+        '201':
+          description: Ride created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ride'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Odometer reading is less than the bike's current total odometer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /rides/{bikeId}/{rideId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+      - name: rideId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Rides]
+      summary: Delete a ride
+      responses:
+        '204':
+          description: Ride deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────── PETROL ─────────────────────────
+  /petrol-entries/{bikeId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Petrol]
+      summary: List petrol fill-up entries for a bike
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: >
+            Paginated list of petrol entries, newest first. Each entry
+            includes the computed `litres` (amount / pricePerLitre), the
+            running `cumulativeLitres` for the bike, and `mileageKmPerLitre` —
+            the mileage achieved on the previous tank, calculated as
+            (this entry's odo − previous entry's odo) ÷ previous entry's litres.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetrolEntryPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Petrol]
+      summary: Log a new petrol fill-up
+      description: >
+        `litres` is computed server-side as `amount / pricePerLitre` and
+        rounded to 2 decimal places. `odo` must be greater than or equal to
+        the bike's current total odometer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetrolEntryCreateRequest'
+      responses:
+        '201':
+          description: Petrol entry created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetrolEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Odometer reading is less than the bike's current total odometer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /petrol-entries/{bikeId}/{petrolEntryId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+      - name: petrolEntryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Petrol]
+      summary: Delete a petrol entry
+      responses:
+        '204':
+          description: Petrol entry deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────── OIL CHANGES ─────────────────────────
+  /oil-changes/{bikeId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Oil Changes]
+      summary: List oil change records for a bike, newest first
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated list of oil changes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OilChangePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Oil Changes]
+      summary: Record an oil change
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OilChangeCreateRequest'
+      responses:
+        '201':
+          description: Oil change recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OilChange'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /oil-changes/{bikeId}/{oilChangeId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+      - name: oilChangeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Oil Changes]
+      summary: Delete an oil change record
+      responses:
+        '204':
+          description: Oil change deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────── TYRE CHECKS ─────────────────────────
+  /tyre-checks/{bikeId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Tyre Checks]
+      summary: List tyre pressure check records for a bike, newest first
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated list of tyre checks.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TyreCheckPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Tyre Checks]
+      summary: Record a tyre pressure check
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TyreCheckCreateRequest'
+      responses:
+        '201':
+          description: Tyre check recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TyreCheck'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tyre-checks/{bikeId}/{tyreCheckId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+      - name: tyreCheckId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Tyre Checks]
+      summary: Delete a tyre check record
+      responses:
+        '204':
+          description: Tyre check deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────── SERVICES ─────────────────────────
+  /services/{bikeId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Services]
+      summary: List service history records for a bike, newest first
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated list of service records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Services]
+      summary: Add a service record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCreateRequest'
+      responses:
+        '201':
+          description: Service record created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /services/{bikeId}/{serviceId}:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+      - name: serviceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Services]
+      summary: Delete a service record
+      responses:
+        '204':
+          description: Service record deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────── DASHBOARD & STATS ─────────────────────────
+  /{bikeId}/months:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Dashboard & Stats]
+      summary: List all months that have data, for populating the month selector
+      description: >
+        Returns all distinct YYYY-MM months present across rides and petrol
+        entries, plus the current month, sorted descending (newest first).
+      responses:
+        '200':
+          description: List of months.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  pattern: '^\d{4}-\d{2}$'
+                example: ["2026-07", "2026-06", "2026-05"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /{bikeId}/dashboard:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Dashboard & Stats]
+      summary: Get the monthly dashboard overview for a bike
+      parameters:
+        - name: month
+          in: query
+          required: true
+          description: Format YYYY-MM.
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+      responses:
+        '200':
+          description: Monthly dashboard data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyDashboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /{bikeId}/overall-stats:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Dashboard & Stats]
+      summary: Get all-time overall statistics and monthly chart breakdown
+      responses:
+        '200':
+          description: Overall stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverallStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /{bikeId}/oil-status:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Dashboard & Stats]
+      summary: Get the current engine oil change status/reminder
+      responses:
+        '200':
+          description: Oil status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OilStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /{bikeId}/tyre-status:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Dashboard & Stats]
+      summary: Get the latest front/rear tyre pressure summary
+      responses:
+        '200':
+          description: Tyre status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TyreStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────── EXPORT ─────────────────────────
+  /bikes/{bikeId}/export:
+    parameters:
+      - $ref: '#/components/parameters/BikeId'
+    get:
+      tags: [Export]
+      summary: Export all data for a bike as a single JSON document
+      description: >
+        Equivalent to the original app's "Export JSON" feature. Returns every
+        record for the bike in one payload, suitable for download/backup.
+      responses:
+        '200':
+          description: Full data export.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT issued after successful Google OAuth 2.0 login. Send as
+        `Authorization: Bearer <token>` on every request except the
+        /auth/google/* endpoints.
+
+  parameters:
+    BikeId:
+      name: bikeId
+      in: path
+      required: true
+      description: ID of the bike, must be owned by the authenticated user.
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      description: Zero-based page number.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      description: Page size.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+
+  responses:
+    BadRequest:
+      description: Validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    Unauthorized:
+      description: Missing, invalid, or expired JWT.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated but not permitted to access this resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found, or not owned by the current user.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ── Shared ──
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          example: 404
+        error:
+          type: string
+          example: Not Found
+        message:
+          type: string
+          example: Bike not found or does not belong to the current user.
+        path:
+          type: string
+          example: /api/v1/bikes/9b1f.../rides
+
+    ValidationFieldError:
+      type: object
+      properties:
+        field:
+          type: string
+          example: odo
+        message:
+          type: string
+          example: Odometer must be greater than or equal to 12540.00 km
+
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            fieldErrors:
+              type: array
+              items:
+                $ref: '#/components/schemas/ValidationFieldError'
+
+    # ── Auth / Users ──
+    AuthTokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Access token lifetime in seconds.
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        pictureUrl:
+          type: string
+          format: uri
+          nullable: true
+        activeBikeId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Bikes ──
+    Bike:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Royal Enfield Classic 350
+        initialOdo:
+          type: number
+          format: double
+          example: 0
+        currentOdo:
+          type: number
+          format: double
+          description: Max of initialOdo and all recorded ride/petrol odometer values.
+          example: 14210.5
+        oilChangeIntervalKm:
+          type: number
+          format: double
+          default: 2000
+          description: Distance interval used for the oil-change due reminder.
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, initialOdo, currentOdo, oilChangeIntervalKm]
+
+    BikeCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        initialOdo:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        oilChangeIntervalKm:
+          type: number
+          format: double
+          minimum: 1
+          default: 2000
+
+    BikeUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        initialOdo:
+          type: number
+          format: double
+          minimum: 0
+        oilChangeIntervalKm:
+          type: number
+          format: double
+          minimum: 1
+
+    # ── Rides ──
+    Ride:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bikeId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          example: "18:45"
+        odo:
+          type: number
+          format: double
+        distanceKm:
+          type: number
+          format: double
+          description: Computed distance since the previous odometer reading (>= 0).
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, bikeId, date, time, odo, distanceKm]
+
+    RideCreateRequest:
+      type: object
+      required: [date, time, odo]
+      properties:
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: "18:45"
+        odo:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+
+    RidePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/Ride'
+
+    # ── Petrol ──
+    PetrolEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bikeId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        odo:
+          type: number
+          format: double
+        amount:
+          type: number
+          format: double
+          description: Amount paid, in ₹.
+        pricePerLitre:
+          type: number
+          format: double
+        litres:
+          type: number
+          format: double
+          description: Computed as amount / pricePerLitre, rounded to 2 decimals.
+        cumulativeLitres:
+          type: number
+          format: double
+          description: Running total of litres for the bike, up to and including this entry.
+        mileageKmPerLitre:
+          type: number
+          format: double
+          nullable: true
+          description: >
+            Mileage achieved on the previous tank: (this odo − previous odo) ÷
+            previous entry's litres. Null for the first fill-up or if the
+            previous entry has no odometer reading.
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, bikeId, date, odo, amount, pricePerLitre, litres, cumulativeLitres]
+
+    PetrolEntryCreateRequest:
+      type: object
+      required: [date, odo, amount, pricePerLitre]
+      properties:
+        date:
+          type: string
+          format: date
+        odo:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+        amount:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+        pricePerLitre:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+          example: 115.81
+
+    PetrolEntryPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/PetrolEntry'
+
+    # ── Oil Changes ──
+    OilChange:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bikeId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        odo:
+          type: number
+          format: double
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, bikeId, date, odo]
+
+    OilChangeCreateRequest:
+      type: object
+      required: [date, odo]
+      properties:
+        date:
+          type: string
+          format: date
+        odo:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+        notes:
+          type: string
+          maxLength: 500
+
+    OilChangePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/OilChange'
+
+    # ── Tyre Checks ──
+    TyreSide:
+      type: string
+      enum: [front, rear, both]
+
+    TyreCheck:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bikeId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        tyre:
+          $ref: '#/components/schemas/TyreSide'
+        psi:
+          type: number
+          format: double
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, bikeId, date, tyre]
+
+    TyreCheckCreateRequest:
+      type: object
+      required: [date, tyre]
+      properties:
+        date:
+          type: string
+          format: date
+        tyre:
+          $ref: '#/components/schemas/TyreSide'
+        psi:
+          type: number
+          format: double
+          minimum: 0
+        notes:
+          type: string
+          maxLength: 500
+
+    TyreCheckPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/TyreCheck'
+
+    # ── Services ──
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bikeId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        odo:
+          type: number
+          format: double
+          nullable: true
+        cost:
+          type: number
+          format: double
+          nullable: true
+        title:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        shop:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, bikeId, date, title]
+
+    ServiceCreateRequest:
+      type: object
+      required: [date, title]
+      properties:
+        date:
+          type: string
+          format: date
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        odo:
+          type: number
+          format: double
+          minimum: 0
+        cost:
+          type: number
+          format: double
+          minimum: 0
+        notes:
+          type: string
+          maxLength: 2000
+        shop:
+          type: string
+          maxLength: 150
+
+    ServicePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/Service'
+
+    # ── Pagination ──
+    PageMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ── Dashboard / Stats ──
+    MonthlyDashboard:
+      type: object
+      properties:
+        month:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+        kmDrivenThisMonth:
+          type: number
+          format: double
+        litresThisMonth:
+          type: number
+          format: double
+        spendThisMonth:
+          type: number
+          format: double
+        currentMileage:
+          type: number
+          format: double
+          nullable: true
+          description: Mileage achieved on the most recently completed fuel cycle (not an average).
+        bestMileageThisMonth:
+          type: number
+          format: double
+          nullable: true
+        ridingDaysThisMonth:
+          type: integer
+        totalRidesThisMonth:
+          type: integer
+        totalOdo:
+          type: number
+          format: double
+        oilStatus:
+          $ref: '#/components/schemas/OilStatus'
+      required:
+        - month
+        - kmDrivenThisMonth
+        - litresThisMonth
+        - spendThisMonth
+        - ridingDaysThisMonth
+        - totalRidesThisMonth
+        - totalOdo
+
+    MonthlyBreakdownItem:
+      type: object
+      properties:
+        month:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+        km:
+          type: number
+          format: double
+        litres:
+          type: number
+          format: double
+        spend:
+          type: number
+          format: double
+
+    OverallStats:
+      type: object
+      properties:
+        totalKm:
+          type: number
+          format: double
+        totalLitres:
+          type: number
+          format: double
+        totalSpend:
+          type: number
+          format: double
+        overallAvgMileage:
+          type: number
+          format: double
+          nullable: true
+        overallMaxMileage:
+          type: number
+          format: double
+          nullable: true
+        monthlyBreakdown:
+          type: array
+          description: Chronological (oldest first), for driving the bar charts.
+          items:
+            $ref: '#/components/schemas/MonthlyBreakdownItem'
+      required: [totalKm, totalLitres, totalSpend, monthlyBreakdown]
+
+    OilStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [NO_DATA, OK, DUE_SOON, OVERDUE]
+        lastChangeDate:
+          type: string
+          format: date
+          nullable: true
+        lastChangeOdo:
+          type: number
+          format: double
+          nullable: true
+        kmSinceLastChange:
+          type: number
+          format: double
+          nullable: true
+        kmRemaining:
+          type: number
+          format: double
+          nullable: true
+          description: Negative when overdue.
+        percentUsed:
+          type: number
+          format: double
+          nullable: true
+          description: 0-100, capped at 100.
+        message:
+          type: string
+          example: Oil change due in 300.00 km
+      required: [status]
+
+    TyreSideStatus:
+      type: object
+      properties:
+        lastCheckedDate:
+          type: string
+          format: date
+          nullable: true
+        psi:
+          type: number
+          format: double
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    TyreStatus:
+      type: object
+      properties:
+        front:
+          $ref: '#/components/schemas/TyreSideStatus'
+        rear:
+          $ref: '#/components/schemas/TyreSideStatus'
+      required: [front, rear]
+
+    # ── Export ──
+    ExportData:
+      type: object
+      properties:
+        bike:
+          $ref: '#/components/schemas/Bike'
+        rides:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ride'
+        petrolEntries:
+          type: array
+          items:
+            $ref: '#/components/schemas/PetrolEntry'
+        oilChanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/OilChange'
+        tyreChecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TyreCheck'
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+        exportedAt:
+          type: string
+          format: date-time
