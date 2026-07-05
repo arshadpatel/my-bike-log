@@ -1,0 +1,21 @@
+package com.mybikelog.api.entity;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+import java.time.Instant;
+import java.util.UUID;
+
+@Entity
+public class Users {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+    private String email;
+    private String name;
+    private String pictureUrl;
+    private UUID activeBikeId;
+    private Instant createdAt;
+}
