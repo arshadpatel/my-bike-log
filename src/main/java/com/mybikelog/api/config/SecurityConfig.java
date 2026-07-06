@@ -23,6 +23,9 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.sameOrigin())
+                )
                 .oauth2Login(oauth->oauth
                         .successHandler(customAuthenticationSuccessHandler));
         return http.build();
