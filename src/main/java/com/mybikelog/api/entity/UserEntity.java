@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.UUID;
 
+@Builder
 @Data
 @Entity
 public class UserEntity {

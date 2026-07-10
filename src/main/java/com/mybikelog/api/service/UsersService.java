@@ -34,12 +34,12 @@ public class UsersService {
     }
 
 
-    public Users login(String email, String name, String picture) {
+    public UserEntity login(String email, String name, String picture) {
 
         return usersRepository.findByEmail(email)
                 .orElseGet(() -> {
 
-                    Users user = Users.builder()
+                    UserEntity user = UserEntity.builder()
                             .email(email)
                             .name(name)
                             .pictureUrl(picture)
