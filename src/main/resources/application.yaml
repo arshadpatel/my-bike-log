@@ -1,3 +1,10 @@
 spring:
   application:
     name: my-bike-log
+  h2:
+    console:
+      enabled: true
+      path : /h2-console
+
+  config:
+    import: application-oauth.yml

@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.time.Instant;
+
 @AllArgsConstructor
 @Service
 public class UsersService {
@@ -29,5 +31,22 @@ public class UsersService {
         UserEntity updatedUser = usersRepository.save(userEntity);
 
         return mapperClass.toUsersDto(updatedUser);
+    }
+
+
+    public Users login(String email, String name, String picture) {
+
+        return usersRepository.findByEmail(email)
+                .orElseGet(() -> {
+
+                    Users user = Users.builder()
+                            .email(email)
+                            .name(name)
+                            .pictureUrl(picture)
+                            .createdAt(Instant.now())
+                            .build();
+
+                    return usersRepository.save(user);
+                });
     }
 }
