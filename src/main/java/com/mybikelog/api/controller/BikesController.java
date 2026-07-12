@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @AllArgsConstructor
@@ -25,13 +26,15 @@ public class BikesController {
 
     @GetMapping
     public ResponseEntity<List<BikeDTO>> getAllBikes(@AuthenticationPrincipal String id){
-        List<BikeDTO> bikeList = bikeService.getAllBikes(id);
+        List<BikeDTO> bikeList = bikeService.getAllBikes(UUID.fromString(id));
         return ResponseEntity.ok(bikeList);
     }
 
     @PostMapping
-    public ResponseEntity<BikeDTO> addNewBike(@RequestBody BikeDTO bikeRequest){
-        return null;
+    public ResponseEntity<BikeDTO> addNewBike(@AuthenticationPrincipal String id,
+                                              @RequestBody BikeDTO bikeRequest){
+        BikeDTO bikeDTO = bikeService.addNewBike(UUID.fromString(id), bikeRequest);
+        return ResponseEntity.ok(bikeDTO);
     }
 
     @GetMapping("/{bikeId}")

@@ -3,7 +3,7 @@ package com.mybikelog.api.service;
 import com.mybikelog.api.dto.UsersDTO;
 import com.mybikelog.api.entity.UserEntity;
 import com.mybikelog.api.mapper.MapperClass;
-import com.mybikelog.api.repository.UsersRepository;
+import com.mybikelog.api.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,23 +12,23 @@ import java.time.Instant;
 
 @AllArgsConstructor
 @Service
-public class UsersService {
+public class UserService {
 
-    private final UsersRepository usersRepository;
+    private final UserRepository userRepository;
     private final MapperClass mapperClass;
 
     public UsersDTO getUser(UUID uuid){
 
-        UserEntity userEntity = usersRepository.getReferenceById(uuid);
+        UserEntity userEntity = userRepository.getReferenceById(uuid);
 
         return mapperClass.toUsersDto(userEntity);
     }
 
     public UsersDTO updateActiveBike(UUID uuid, UsersDTO usersDTO) {
 
-        UserEntity userEntity = usersRepository.getReferenceById(uuid);
+        UserEntity userEntity = userRepository.getReferenceById(uuid);
         userEntity.setActiveBikeId(usersDTO.getActiveBikeId());
-        UserEntity updatedUser = usersRepository.save(userEntity);
+        UserEntity updatedUser = userRepository.save(userEntity);
 
         return mapperClass.toUsersDto(updatedUser);
     }
@@ -36,7 +36,7 @@ public class UsersService {
 
     public UserEntity login(String email, String name, String picture) {
 
-        return usersRepository.findByEmail(email)
+        return userRepository.findByEmail(email)
                 .orElseGet(() -> {
 
                     UserEntity user = UserEntity.builder()
@@ -46,7 +46,7 @@ public class UsersService {
                             .createdAt(Instant.now())
                             .build();
 
-                    return usersRepository.save(user);
+                    return userRepository.save(user);
                 });
     }
 }

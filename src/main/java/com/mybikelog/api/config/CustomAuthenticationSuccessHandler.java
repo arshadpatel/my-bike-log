@@ -1,7 +1,7 @@
 package com.mybikelog.api.config;
 
 import com.mybikelog.api.entity.UserEntity;
-import com.mybikelog.api.service.UsersService;
+import com.mybikelog.api.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +16,7 @@ import java.io.IOException;
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     @Autowired
-    private UsersService userService;
+    private UserService userService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,

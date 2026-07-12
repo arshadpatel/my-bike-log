@@ -5,6 +5,7 @@ import com.mybikelog.api.dto.UsersDTO;
 import com.mybikelog.api.entity.BikeEntity;
 import com.mybikelog.api.entity.UserEntity;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -16,6 +17,9 @@ public interface MapperClass {
     UserEntity toUsersEntity(UsersDTO dto);
 
     BikeDTO toBikeDto(BikeEntity bikeEntity);
+
+    @Mapping(target = "user", ignore = true)
+    BikeEntity toBikeEntity(BikeDTO bikeDTO);
 
     List<BikeDTO> toListBikeDto(List<BikeEntity> bikeEntityList);
 
