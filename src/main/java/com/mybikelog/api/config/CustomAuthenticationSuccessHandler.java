@@ -2,9 +2,10 @@ package com.mybikelog.api.config;
 
 import com.mybikelog.api.entity.UserEntity;
 import com.mybikelog.api.service.UserService;
+import com.mybikelog.api.util.JWTUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -12,11 +13,12 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+@AllArgsConstructor
 @Component
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final JWTUtil jwtUtil;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -30,7 +32,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
         UserEntity user = userService.login(email,name,picture);
 
-        String token = "Alhamdulillah";
+        String token = jwtUtil.generateToken(String.valueOf(user.getId()));
 
         response.setContentType("application/json");
 
