@@ -19,7 +19,7 @@ public class UserService {
 
     public UsersDTO getUser(UUID uuid){
 
-        UserEntity userEntity = userRepository.getReferenceById(uuid);
+        UserEntity userEntity = userRepository.findById(uuid).orElse(null);
 
         return mapperClass.toUsersDto(userEntity);
     }
@@ -32,7 +32,6 @@ public class UserService {
 
         return mapperClass.toUsersDto(updatedUser);
     }
-
 
     public UserEntity login(String email, String name, String picture) {
 
