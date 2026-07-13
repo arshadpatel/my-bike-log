@@ -42,6 +42,12 @@ public class BikeService {
     }
 
     public BikeDTO updateBikeDetails(UUID userId, UUID bikeId, BikeDTO bikeRequest) {
-        return null;
+        Optional<BikeEntity> fetchBikeDetails = bikeRepository.findByIdAndUserId(bikeId, userId);
+        fetchBikeDetails.get().setName(bikeRequest.getName());
+        fetchBikeDetails.get().setCurrentOdo(bikeRequest.getCurrentOdo());
+        fetchBikeDetails.get().setInitialOdo(bikeRequest.getInitialOdo());
+        fetchBikeDetails.get().setOilChangeIntervalKm(bikeRequest.getOilChangeIntervalKm());
+        BikeEntity updatedBikeDetails = bikeRepository.save(fetchBikeDetails.get());
+        return mapperClass.toBikeDto(updatedBikeDetails);
     }
 }
