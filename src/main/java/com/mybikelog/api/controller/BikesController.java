@@ -38,14 +38,19 @@ public class BikesController {
     }
 
     @GetMapping("/{bikeId}")
-    public ResponseEntity<BikeDTO> getBike(@PathVariable String bikeId){
-        return null;
+    public ResponseEntity<BikeDTO> getBike(@AuthenticationPrincipal String id,
+                                           @PathVariable String bikeId){
+        BikeDTO bikeDTO = bikeService.getBike(UUID.fromString(id), UUID.fromString(bikeId));
+        return ResponseEntity.ok(bikeDTO);
     }
 
     @PutMapping("/{bikeId}")
-    public ResponseEntity<BikeDTO> updateBikeDetails(@PathVariable String bikeId,
+    public ResponseEntity<BikeDTO> updateBikeDetails(@AuthenticationPrincipal String id,
+                                                     @PathVariable String bikeId,
                                                      @RequestBody BikeDTO bikeRequest){
-        return null;
+        BikeDTO bikeDTO = bikeService.updateBikeDetails(UUID.fromString(id),
+                UUID.fromString(bikeId), bikeRequest);
+        return ResponseEntity.ok(bikeDTO);
     }
 
     @DeleteMapping("/{bikeId}")

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -27,11 +28,20 @@ public class BikeService {
     }
 
     public BikeDTO addNewBike(UUID uuid, BikeDTO bikeRequest) {
-        UserEntity user = userRepository.getReferenceById(uuid);
+        Optional<UserEntity> user = userRepository.findById(uuid);
         BikeEntity bike = mapperClass.toBikeEntity(bikeRequest);
         bike.setCreatedAt(Instant.now());
-        bike.setUser(user);
+        bike.setUser(user.get());
         BikeEntity savedBike = bikeRepository.save(bike);
         return mapperClass.toBikeDto(savedBike);
+    }
+
+    public BikeDTO getBike(UUID userId, UUID bikeId) {
+        Optional<BikeEntity> bikeEntity = bikeRepository.findByIdAndUserId(bikeId, userId);
+        return mapperClass.toBikeDto(bikeEntity.get());
+    }
+
+    public BikeDTO updateBikeDetails(UUID userId, UUID bikeId, BikeDTO bikeRequest) {
+        return null;
     }
 }
