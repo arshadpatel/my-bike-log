@@ -1,7 +1,7 @@
 package com.mybikelog.api.controller;
 
 import com.mybikelog.api.dto.PageDTO;
-import com.mybikelog.api.dto.RideAndPetrolDTO;
+import com.mybikelog.api.dto.RideDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,8 +25,8 @@ public class PetrolController {
     }
 
     @PostMapping
-    public ResponseEntity<RideAndPetrolDTO> addPetrolFillUp(@PathVariable String bikeId,
-                                                            @RequestBody RideAndPetrolDTO petrolRequest){
+    public ResponseEntity<RideDTO> addPetrolFillUp(@PathVariable String bikeId,
+                                                   @RequestBody RideDTO petrolRequest){
         return null;
     }
 

@@ -37,17 +37,22 @@ public class BikeService {
     }
 
     public BikeDTO getBike(UUID userId, UUID bikeId) {
-        Optional<BikeEntity> bikeEntity = bikeRepository.findByIdAndUserId(bikeId, userId);
-        return mapperClass.toBikeDto(bikeEntity.get());
+        BikeEntity bikeEntity = getBikeEntity(userId, bikeId);
+        return mapperClass.toBikeDto(bikeEntity);
     }
 
     public BikeDTO updateBikeDetails(UUID userId, UUID bikeId, BikeDTO bikeRequest) {
-        Optional<BikeEntity> fetchBikeDetails = bikeRepository.findByIdAndUserId(bikeId, userId);
-        fetchBikeDetails.get().setName(bikeRequest.getName());
-        fetchBikeDetails.get().setCurrentOdo(bikeRequest.getCurrentOdo());
-        fetchBikeDetails.get().setInitialOdo(bikeRequest.getInitialOdo());
-        fetchBikeDetails.get().setOilChangeIntervalKm(bikeRequest.getOilChangeIntervalKm());
-        BikeEntity updatedBikeDetails = bikeRepository.save(fetchBikeDetails.get());
+        BikeEntity fetchBikeDetails = getBikeEntity(userId, bikeId);
+        fetchBikeDetails.setName(bikeRequest.getName());
+        fetchBikeDetails.setCurrentOdo(bikeRequest.getCurrentOdo());
+        fetchBikeDetails.setInitialOdo(bikeRequest.getInitialOdo());
+        fetchBikeDetails.setOilChangeIntervalKm(bikeRequest.getOilChangeIntervalKm());
+        BikeEntity updatedBikeDetails = bikeRepository.save(fetchBikeDetails);
         return mapperClass.toBikeDto(updatedBikeDetails);
+    }
+
+    public BikeEntity getBikeEntity(UUID userId, UUID bikeId){
+        return bikeRepository.findByIdAndUserId(bikeId, userId)
+                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
     }
 }
