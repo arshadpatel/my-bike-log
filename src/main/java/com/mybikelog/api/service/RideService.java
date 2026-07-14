@@ -22,7 +22,7 @@ public class RideService {
     private final MapperClass mapperClass;
 
     public RideDTO addRide(UUID userId, UUID bikeId, RideDTO rideRequest) {
-        BikeEntity bike = getBikeEntity(userId, bikeId);
+        BikeEntity bike = getBikeDetails(userId, bikeId);
         if(rideRequest.getOdo() < bike.getCurrentOdo()) throw new RuntimeException("Enter Correct Odometer Reading");
         Optional<RideEntity> previousRide = rideRepository.findTopByBikeIdOrderByOdoDesc(bikeId);
         Double newOdo = rideRequest.getOdo();
@@ -41,12 +41,16 @@ public class RideService {
         RideEntity savedRide = rideRepository.save(rideEntity);
 
         bike.setCurrentOdo(rideRequest.getOdo());
-        bikeRepository.save(bike);
+        saveBikeDetails(bike);
 
         return mapperClass.toRideDto(savedRide);
     }
 
-    public BikeEntity getBikeEntity(UUID userId, UUID bikeId){
+    private void saveBikeDetails(BikeEntity bike) {
+        bikeRepository.save(bike);
+    }
+
+    public BikeEntity getBikeDetails(UUID userId, UUID bikeId){
         return bikeRepository.findByIdAndUserId(bikeId, userId)
                 .orElseThrow(() -> new RuntimeException("Bike Not Found"));
     }
