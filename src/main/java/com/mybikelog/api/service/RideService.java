@@ -73,4 +73,31 @@ public class RideService {
         return bikeRepository.findByIdAndUserId(bikeId, userId)
                 .orElseThrow(() -> new RuntimeException("Bike Not Found"));
     }
+
+    public BikeEntity getBikeDetails(UUID bikeId){
+        return bikeRepository.findById(bikeId)
+                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
+    }
+
+    public void deleteRide(UUID bikeId, UUID rideId) {
+        BikeEntity bike = getBikeDetails(bikeId);
+
+        RideEntity rideEntity = rideRepository.findByIdAndBikeId(rideId, bikeId)
+                .orElseThrow(() -> new RuntimeException("Ride Not Found"));
+
+        RideEntity latestRide = rideRepository.findTopByBikeIdOrderByOdoDesc(bikeId)
+                .orElseThrow(() -> new RuntimeException("No Latest Ride Found"));
+
+        if (!rideEntity.getId().equals(latestRide.getId()))
+            throw new RuntimeException("Only Latest ride can be deleted");
+
+        rideRepository.delete(latestRide);
+
+        Optional<RideEntity> newLatestRide = rideRepository.findTopByBikeIdOrderByOdoDesc(bikeId);
+
+        if(newLatestRide.isPresent()) bike.setCurrentOdo(newLatestRide.get().getOdo());
+        else bike.setCurrentOdo(bike.getInitialOdo());
+
+        saveBikeDetails(bike);
+    }
 }

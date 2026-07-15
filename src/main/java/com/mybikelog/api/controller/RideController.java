@@ -49,6 +49,7 @@ public class RideController {
     @DeleteMapping("/{rideId}")
     public ResponseEntity<?> deleteRide(@PathVariable String bikeId,
                                         @PathVariable String rideId){
-        return null;
+        rideService.deleteRide(UUID.fromString(bikeId), UUID.fromString(rideId));
+        return ResponseEntity.noContent().build();
     }
 }
