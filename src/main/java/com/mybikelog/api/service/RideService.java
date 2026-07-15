@@ -1,5 +1,6 @@
 package com.mybikelog.api.service;
 
+import com.mybikelog.api.dto.PageDTO;
 import com.mybikelog.api.dto.RideDTO;
 import com.mybikelog.api.entity.BikeEntity;
 import com.mybikelog.api.entity.RideEntity;
@@ -7,9 +8,13 @@ import com.mybikelog.api.mapper.MapperClass;
 import com.mybikelog.api.repository.BikeRepository;
 import com.mybikelog.api.repository.RideRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.YearMonth;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,6 +49,20 @@ public class RideService {
         saveBikeDetails(bike);
 
         return mapperClass.toRideDto(savedRide);
+    }
+
+    public PageDTO<RideDTO> getAllRides(UUID userId, UUID bikeId, int pageNo, int pageSize, String month) {
+        getBikeDetails(userId, bikeId);
+        Pageable pageable = PageRequest.of(pageNo, pageSize);
+        Page<RideEntity> rides;
+        if(month == null){
+            rides = rideRepository.findByBikeIdOrderByCreatedAtDesc(bikeId, pageable);
+        }else{
+            YearMonth yearMonth = YearMonth.parse(month);
+            rides = rideRepository.findByBikeIdAndDateBetweenOrderByCreatedAtDesc(bikeId,
+                    yearMonth.atDay(1), yearMonth.atEndOfMonth(), pageable);
+        }
+        return mapperClass.toPageDto(rides);
     }
 
     private void saveBikeDetails(BikeEntity bike) {

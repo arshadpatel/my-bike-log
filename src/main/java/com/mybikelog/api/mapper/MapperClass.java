@@ -1,6 +1,7 @@
 package com.mybikelog.api.mapper;
 
 import com.mybikelog.api.dto.BikeDTO;
+import com.mybikelog.api.dto.PageDTO;
 import com.mybikelog.api.dto.RideDTO;
 import com.mybikelog.api.dto.UsersDTO;
 import com.mybikelog.api.entity.BikeEntity;
@@ -8,6 +9,7 @@ import com.mybikelog.api.entity.RideEntity;
 import com.mybikelog.api.entity.UserEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.springframework.data.domain.Page;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -47,5 +49,21 @@ public interface MapperClass {
 
     default LocalTime mapTime(String time) {
         return time == null ? null : LocalTime.parse(time);
+    }
+
+    default PageDTO<RideDTO> toPageDto(Page<RideEntity> page) {
+
+        return PageDTO.<RideDTO>builder()
+                .page(page.getNumber())
+                .size(page.getSize())
+                .totalElements((int) page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .content(
+                        page.getContent()
+                                .stream()
+                                .map(this::toRideDto)
+                                .toList()
+                )
+                .build();
     }
 }
