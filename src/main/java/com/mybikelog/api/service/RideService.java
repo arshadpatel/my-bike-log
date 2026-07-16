@@ -25,9 +25,10 @@ public class RideService {
     private final BikeRepository bikeRepository;
     private final RideRepository rideRepository;
     private final MapperClass mapperClass;
+    private final CommonService commonService;
 
     public RideDTO addRide(UUID userId, UUID bikeId, RideDTO rideRequest) {
-        BikeEntity bike = getBikeDetails(userId, bikeId);
+        BikeEntity bike = commonService.getBikeDetails(userId, bikeId);
         if(rideRequest.getOdo() < bike.getCurrentOdo()) throw new RuntimeException("Enter Correct Odometer Reading");
         Optional<RideEntity> previousRide = rideRepository.findTopByBikeIdOrderByOdoDesc(bikeId);
         Double newOdo = rideRequest.getOdo();
@@ -45,14 +46,13 @@ public class RideService {
         rideEntity.setCreatedAt(Instant.now());
         RideEntity savedRide = rideRepository.save(rideEntity);
 
-        bike.setCurrentOdo(rideRequest.getOdo());
-        saveBikeDetails(bike);
+        commonService.updateBikeCurrentOdo(bike);
 
         return mapperClass.toRideDto(savedRide);
     }
 
     public PageDTO<RideDTO> getAllRides(UUID userId, UUID bikeId, int pageNo, int pageSize, String month) {
-        getBikeDetails(userId, bikeId);
+        commonService.getBikeDetails(userId, bikeId);
         Pageable pageable = PageRequest.of(pageNo, pageSize);
         Page<RideEntity> rides;
         if(month == null){
@@ -65,22 +65,8 @@ public class RideService {
         return mapperClass.toPageDto(rides, mapperClass::toRideDto);
     }
 
-    private void saveBikeDetails(BikeEntity bike) {
-        bikeRepository.save(bike);
-    }
-
-    public BikeEntity getBikeDetails(UUID userId, UUID bikeId){
-        return bikeRepository.findByIdAndUserId(bikeId, userId)
-                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
-    }
-
-    public BikeEntity getBikeDetails(UUID bikeId){
-        return bikeRepository.findById(bikeId)
-                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
-    }
-
     public void deleteRide(UUID bikeId, UUID rideId) {
-        BikeEntity bike = getBikeDetails(bikeId);
+        BikeEntity bike = commonService.getBikeDetails(bikeId);
 
         RideEntity rideEntity = rideRepository.findByIdAndBikeId(rideId, bikeId)
                 .orElseThrow(() -> new RuntimeException("Ride Not Found"));
@@ -93,11 +79,6 @@ public class RideService {
 
         rideRepository.delete(latestRide);
 
-        Optional<RideEntity> newLatestRide = rideRepository.findTopByBikeIdOrderByOdoDesc(bikeId);
-
-        if(newLatestRide.isPresent()) bike.setCurrentOdo(newLatestRide.get().getOdo());
-        else bike.setCurrentOdo(bike.getInitialOdo());
-
-        saveBikeDetails(bike);
+        commonService.updateBikeCurrentOdo(bike);
     }
 }

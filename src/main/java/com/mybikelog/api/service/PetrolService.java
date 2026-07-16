@@ -26,9 +26,10 @@ public class PetrolService {
     private final PetrolRepository petrolRepository;
     private final BikeRepository bikeRepository;
     private final MapperClass mapperClass;
+    private final CommonService commonService;
 
     public PetrolDTO addPetrol(UUID userId, UUID bikeId, PetrolDTO petrolRequest) {
-        BikeEntity bike = getBikeDetails(userId, bikeId);
+        BikeEntity bike = commonService.getBikeDetails(userId, bikeId);
         if(petrolRequest.getOdo() < bike.getCurrentOdo()) throw new RuntimeException("Enter Correct Odometer Reading");
 
         Optional<PetrolEntity> previousPetrolEntity = petrolRepository.findTopByBikeIdOrderByOdoDesc(bikeId);
@@ -58,14 +59,13 @@ public class PetrolService {
 
         PetrolEntity savedPetrolEntity = petrolRepository.save(petrolEntity);
 
-        bike.setCurrentOdo(petrolRequest.getOdo());
-        saveBikeDetails(bike);
+        commonService.updateBikeCurrentOdo(bike);
 
         return mapperClass.toPetrolDto(savedPetrolEntity);
     }
 
     public PageDTO<PetrolDTO> getAllFillUps(UUID userId, UUID bikeId, int pageNo, int pageSize, String month) {
-        getBikeDetails(userId, bikeId);
+        commonService.getBikeDetails(userId, bikeId);
         Pageable pageable = PageRequest.of(pageNo, pageSize);
         Page<PetrolEntity> petrolEntities;
         if(month == null){
@@ -79,7 +79,7 @@ public class PetrolService {
     }
 
     public void deletePetrolEntry(UUID bikeId, UUID petrolEntryId) {
-        BikeEntity bike  = getBikeDetails(bikeId);
+        BikeEntity bike  = commonService.getBikeDetails(bikeId);
 
         PetrolEntity petrolEntity = petrolRepository.findByIdAndBikeId(petrolEntryId, bikeId)
                 .orElseThrow(() -> new RuntimeException("Petrol Entry Not Found"));
@@ -97,25 +97,8 @@ public class PetrolService {
         if(newLatestPetrolEntry.isPresent()){
             newLatestPetrolEntry.get().setMileageKmPerLitre(null);
             newLatestPetrolEntry.get().setDistanceKm(null);
-            bike.setCurrentOdo(newLatestPetrolEntry.get().getOdo());
             petrolRepository.save(newLatestPetrolEntry.get());
-        }else {
-            bike.setCurrentOdo(bike.getInitialOdo());
         }
-        saveBikeDetails(bike);
-    }
-
-    public BikeEntity getBikeDetails(UUID userId, UUID bikeId){
-        return bikeRepository.findByIdAndUserId(bikeId, userId)
-                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
-    }
-
-    private void saveBikeDetails(BikeEntity bike) {
-        bikeRepository.save(bike);
-    }
-
-    public BikeEntity getBikeDetails(UUID bikeId){
-        return bikeRepository.findById(bikeId)
-                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
+        commonService.updateBikeCurrentOdo(bike);
     }
 }
