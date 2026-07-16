@@ -2,9 +2,11 @@ package com.mybikelog.api.mapper;
 
 import com.mybikelog.api.dto.BikeDTO;
 import com.mybikelog.api.dto.PageDTO;
+import com.mybikelog.api.dto.PetrolDTO;
 import com.mybikelog.api.dto.RideDTO;
 import com.mybikelog.api.dto.UsersDTO;
 import com.mybikelog.api.entity.BikeEntity;
+import com.mybikelog.api.entity.PetrolEntity;
 import com.mybikelog.api.entity.RideEntity;
 import com.mybikelog.api.entity.UserEntity;
 import org.mapstruct.Mapper;
@@ -66,4 +68,9 @@ public interface MapperClass {
                 )
                 .build();
     }
+
+    @Mapping(target = "bike", ignore = true)
+    PetrolEntity toPetrolEntity(PetrolDTO petrolDTO);
+
+    PetrolDTO toPetrolDto(PetrolEntity petrolEntity);
 }

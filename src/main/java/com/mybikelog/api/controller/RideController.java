@@ -4,6 +4,7 @@ import com.mybikelog.api.dto.RideDTO;
 import com.mybikelog.api.dto.PageDTO;
 import com.mybikelog.api.service.RideService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -43,7 +44,7 @@ public class RideController {
                                            @RequestBody RideDTO rideRequest){
         RideDTO rideDTO = rideService.addRide(UUID.fromString(id),
                 UUID.fromString(bikeId), rideRequest);
-        return ResponseEntity.ok(rideDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(rideDTO);
     }
 
     @DeleteMapping("/{rideId}")

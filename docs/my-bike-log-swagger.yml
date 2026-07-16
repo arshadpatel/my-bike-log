@@ -375,10 +375,13 @@ paths:
         '200':
           description: >
             Paginated list of petrol entries, newest first. Each entry
-            includes the computed `litres` (amount / pricePerLitre), the
-            running `cumulativeLitres` for the bike, and `mileageKmPerLitre` —
-            the mileage achieved on the previous tank, calculated as
-            (this entry's odo − previous entry's odo) ÷ previous entry's litres.
+            includes the computed `litres` (amount / pricePerLitre), 
+            `distanceKm` represents the distance travelled using the fuel from 
+            this petrol entry. the running `cumulativeLitres` for the bike, and 
+            `mileageKmPerLitre` represents the mileage achieved using the fuel 
+            from this petrol entry and is calculated as distanceKm / litres.
+            The latest petrol entry will have null values for distanceKm and 
+            mileageKmPerLitre until the next petrol refill is logged.
           content:
             application/json:
               schema:
@@ -393,7 +396,9 @@ paths:
       description: >
         `litres` is computed server-side as `amount / pricePerLitre` and
         rounded to 2 decimal places. `odo` must be greater than or equal to
-        the bike's current total odometer.
+        the bike's current total odometer. After a new petrol entry is created,
+        the previous petrol entry is updated with distanceKm and 
+        mileageKmPerLitre using the difference between the two odometer readings.
       requestBody:
         required: true
         content:
@@ -1063,9 +1068,16 @@ components:
           format: double
           nullable: true
           description: >
-            Mileage achieved on the previous tank: (this odo − previous odo) ÷
-            previous entry's litres. Null for the first fill-up or if the
-            previous entry has no odometer reading.
+            Mileage achieved using the fuel from this petrol entry.
+            Calculated as distanceKm / litres.
+            Will be null for the latest petrol entry.
+        distanceKm:
+          type: number
+          format: double
+          nullable: true
+          description: >
+            Distance travelled using the fuel from this petrol entry.
+            will be null for the latest petrol entry.
         createdAt:
           type: string
           format: date-time
