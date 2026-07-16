@@ -64,15 +64,6 @@ public class PetrolService {
         return mapperClass.toPetrolDto(savedPetrolEntity);
     }
 
-    public BikeEntity getBikeDetails(UUID userId, UUID bikeId){
-        return bikeRepository.findByIdAndUserId(bikeId, userId)
-                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
-    }
-
-    private void saveBikeDetails(BikeEntity bike) {
-        bikeRepository.save(bike);
-    }
-
     public PageDTO<PetrolDTO> getAllFillUps(UUID userId, UUID bikeId, int pageNo, int pageSize, String month) {
         getBikeDetails(userId, bikeId);
         Pageable pageable = PageRequest.of(pageNo, pageSize);
@@ -85,5 +76,46 @@ public class PetrolService {
                     yearMonth.atDay(1), yearMonth.atEndOfMonth(), pageable);
         }
         return mapperClass.toPageDto(petrolEntities, mapperClass::toPetrolDto);
+    }
+
+    public void deletePetrolEntry(UUID bikeId, UUID petrolEntryId) {
+        BikeEntity bike  = getBikeDetails(bikeId);
+
+        PetrolEntity petrolEntity = petrolRepository.findByIdAndBikeId(petrolEntryId, bikeId)
+                .orElseThrow(() -> new RuntimeException("Petrol Entry Not Found"));
+
+        PetrolEntity latestPetrolEntry = petrolRepository.findTopByBikeIdOrderByOdoDesc(bikeId)
+                .orElseThrow(() -> new RuntimeException("No Latest Petrol Entry Found"));
+
+        if(!petrolEntity.getId().equals(latestPetrolEntry.getId()))
+            throw new RuntimeException("Only Latest petrol entry can be deleted");
+
+        petrolRepository.delete(latestPetrolEntry);
+
+        Optional<PetrolEntity> newLatestPetrolEntry = petrolRepository.findTopByBikeIdOrderByOdoDesc(bikeId);
+
+        if(newLatestPetrolEntry.isPresent()){
+            newLatestPetrolEntry.get().setMileageKmPerLitre(null);
+            newLatestPetrolEntry.get().setDistanceKm(null);
+            bike.setCurrentOdo(newLatestPetrolEntry.get().getOdo());
+            petrolRepository.save(newLatestPetrolEntry.get());
+        }else {
+            bike.setCurrentOdo(bike.getInitialOdo());
+        }
+        saveBikeDetails(bike);
+    }
+
+    public BikeEntity getBikeDetails(UUID userId, UUID bikeId){
+        return bikeRepository.findByIdAndUserId(bikeId, userId)
+                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
+    }
+
+    private void saveBikeDetails(BikeEntity bike) {
+        bikeRepository.save(bike);
+    }
+
+    public BikeEntity getBikeDetails(UUID bikeId){
+        return bikeRepository.findById(bikeId)
+                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
     }
 }

@@ -50,6 +50,7 @@ public class PetrolController {
     @DeleteMapping("/{petrolEntryId}")
     public ResponseEntity<?> deletePetrolFillUp(@PathVariable String bikeId,
                                                 @PathVariable String petrolEntryId){
-        return null;
+        petrolService.deletePetrolEntry(UUID.fromString(bikeId), UUID.fromString(petrolEntryId));
+        return ResponseEntity.noContent().build();
     }
 }
