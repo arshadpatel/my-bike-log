@@ -62,7 +62,7 @@ public class RideService {
             rides = rideRepository.findByBikeIdAndDateBetweenOrderByCreatedAtDesc(bikeId,
                     yearMonth.atDay(1), yearMonth.atEndOfMonth(), pageable);
         }
-        return mapperClass.toPageDto(rides);
+        return mapperClass.toPageDto(rides, mapperClass::toRideDto);
     }
 
     private void saveBikeDetails(BikeEntity bike) {

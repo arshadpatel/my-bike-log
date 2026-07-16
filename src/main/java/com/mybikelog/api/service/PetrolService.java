@@ -1,5 +1,6 @@
 package com.mybikelog.api.service;
 
+import com.mybikelog.api.dto.PageDTO;
 import com.mybikelog.api.dto.PetrolDTO;
 import com.mybikelog.api.entity.BikeEntity;
 import com.mybikelog.api.entity.PetrolEntity;
@@ -8,9 +9,13 @@ import com.mybikelog.api.repository.BikeRepository;
 import com.mybikelog.api.repository.PetrolRepository;
 import com.mybikelog.api.util.NumberUtil;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.YearMonth;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -66,5 +71,19 @@ public class PetrolService {
 
     private void saveBikeDetails(BikeEntity bike) {
         bikeRepository.save(bike);
+    }
+
+    public PageDTO<PetrolDTO> getAllFillUps(UUID userId, UUID bikeId, int pageNo, int pageSize, String month) {
+        getBikeDetails(userId, bikeId);
+        Pageable pageable = PageRequest.of(pageNo, pageSize);
+        Page<PetrolEntity> petrolEntities;
+        if(month == null){
+            petrolEntities = petrolRepository.findByBikeIdOrderByCreatedAtDesc(bikeId, pageable);
+        }else {
+            YearMonth yearMonth = YearMonth.parse(month);
+            petrolEntities = petrolRepository.findByBikeIdAndDateBetweenOrderByCreatedAtDesc(bikeId,
+                    yearMonth.atDay(1), yearMonth.atEndOfMonth(), pageable);
+        }
+        return mapperClass.toPageDto(petrolEntities, mapperClass::toPetrolDto);
     }
 }

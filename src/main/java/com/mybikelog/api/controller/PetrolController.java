@@ -26,11 +26,16 @@ public class PetrolController {
     private final PetrolService petrolService;
 
     @GetMapping
-    public ResponseEntity<PageDTO> getPetrolFillUps(@PathVariable String bikeId,
+    public ResponseEntity<PageDTO<PetrolDTO>> getPetrolFillUps(@AuthenticationPrincipal String id,
+                                                    @PathVariable String bikeId,
                                                     @RequestParam(required = false)  String month,
-                                                    @RequestParam(required = false)  String page,
-                                                    @RequestParam(required = false)  String size){
-        return null;
+                                                    @RequestParam(required = false)  Integer page,
+                                                    @RequestParam(required = false)  Integer size){
+        int pageNo = page == null ? 0 : page;
+        int pageSize = size == null ? 10 : size;
+
+        PageDTO<PetrolDTO> pageDTO = petrolService.getAllFillUps(UUID.fromString(id), UUID.fromString(bikeId), pageNo, pageSize, month);
+        return ResponseEntity.ok(pageDTO);
     }
 
     @PostMapping

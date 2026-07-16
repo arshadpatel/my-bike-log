@@ -26,7 +26,7 @@ public class RideController {
     private final RideService rideService;
 
     @GetMapping
-    public ResponseEntity<PageDTO> getRides(@AuthenticationPrincipal String id,
+    public ResponseEntity<PageDTO<RideDTO>> getRides(@AuthenticationPrincipal String id,
                                             @PathVariable String bikeId,
                                             @RequestParam(required = false)  String month,
                                             @RequestParam(required = false)  Integer page,
@@ -34,7 +34,7 @@ public class RideController {
         int pageNo = page == null ? 0 : page;
         int pageSize = size == null ? 10 : size;
 
-        PageDTO pageDTO = rideService.getAllRides(UUID.fromString(id), UUID.fromString(bikeId), pageNo, pageSize, month);
+        PageDTO<RideDTO> pageDTO = rideService.getAllRides(UUID.fromString(id), UUID.fromString(bikeId), pageNo, pageSize, month);
         return ResponseEntity.ok(pageDTO);
     }
 

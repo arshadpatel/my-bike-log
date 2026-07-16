@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.function.Function;
 
 @Mapper(componentModel = "spring")
 public interface MapperClass {
@@ -53,9 +54,9 @@ public interface MapperClass {
         return time == null ? null : LocalTime.parse(time);
     }
 
-    default PageDTO<RideDTO> toPageDto(Page<RideEntity> page) {
+    default <E, D> PageDTO<D> toPageDto(Page<E> page, Function<E, D> elementMapper) {
 
-        return PageDTO.<RideDTO>builder()
+        return PageDTO.<D>builder()
                 .page(page.getNumber())
                 .size(page.getSize())
                 .totalElements((int) page.getTotalElements())
@@ -63,7 +64,7 @@ public interface MapperClass {
                 .content(
                         page.getContent()
                                 .stream()
-                                .map(this::toRideDto)
+                                .map(elementMapper)
                                 .toList()
                 )
                 .build();
@@ -72,5 +73,6 @@ public interface MapperClass {
     @Mapping(target = "bike", ignore = true)
     PetrolEntity toPetrolEntity(PetrolDTO petrolDTO);
 
+    @Mapping(target = "bikeId", source = "bike.id")
     PetrolDTO toPetrolDto(PetrolEntity petrolEntity);
 }
