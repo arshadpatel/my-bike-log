@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +22,4 @@ public interface PetrolRepository extends JpaRepository<PetrolEntity, UUID> {
                                              UUID bikeId);
 
     Optional<PetrolEntity> findTopByBikeIdOrderByOdoDesc(UUID bikeId);
-
-    List<PetrolEntity> findTop2ByBikeIdOrderByOdoDesc(UUID bikeId);
 }
