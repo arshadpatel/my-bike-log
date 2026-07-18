@@ -4,7 +4,10 @@ import com.mybikelog.api.dto.MonthlyDashboradDTO;
 import com.mybikelog.api.dto.OilStatusDTO;
 import com.mybikelog.api.dto.OverallStatsDTO;
 import com.mybikelog.api.dto.TyreStatusDTO;
+import com.mybikelog.api.service.DashboardService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,14 +15,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
+@AllArgsConstructor
 @RequestMapping("/{bikeId}")
 public class DashboardController {
 
+    private final DashboardService dashboardService;
+
     @GetMapping("/months")
-    public ResponseEntity<List<String>> getAllMonths(@PathVariable String bikeId){
-        return null;
+    public ResponseEntity<List<String>> getAllMonths(@AuthenticationPrincipal String id,
+                                                     @PathVariable String bikeId){
+        List<String> monthsList = dashboardService.getAllMonths(
+                UUID.fromString(id), UUID.fromString(bikeId));
+        return ResponseEntity.ok(monthsList);
     }
 
     @GetMapping("/dashboard")

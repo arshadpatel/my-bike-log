@@ -2,6 +2,8 @@ package com.mybikelog.api.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class OverallStatsDTO {
     private Double totalKm;
@@ -9,5 +11,5 @@ public class OverallStatsDTO {
     private Double totalSpend;
     private Double overallAvgMileage;
     private Double overallMaxMileage;
-    private MonthlyBreakdown monthlyBreakdown;
+    private List<MonthlyBreakdown> monthlyBreakdown;
 }
