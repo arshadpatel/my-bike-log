@@ -42,8 +42,11 @@ public class DashboardController {
     }
 
     @GetMapping("/overall-stats")
-    public ResponseEntity<OverallStatsDTO> getOverallStats(@PathVariable String bikeId){
-        return null;
+    public ResponseEntity<OverallStatsDTO> getOverallStats(@AuthenticationPrincipal String id,
+                                                           @PathVariable String bikeId){
+        OverallStatsDTO overallStatsDTO = dashboardService.getOverallStats(
+                UUID.fromString(id), UUID.fromString(bikeId));
+        return ResponseEntity.ok(overallStatsDTO);
     }
 
     @GetMapping("/oil-status")

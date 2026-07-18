@@ -27,4 +27,6 @@ public interface PetrolRepository extends JpaRepository<PetrolEntity, UUID> {
 
     @Query("SELECT DISTINCT p.date FROM PetrolEntity p WHERE p.bike.id = :bikeId")
     List<LocalDate> findDistinctDateByBikeId(UUID bikeId);
+
+    List<PetrolEntity> findByBikeId(UUID bikeId);
 }

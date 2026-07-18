@@ -1,7 +1,9 @@
 package com.mybikelog.api.dto;
 
+import lombok.Builder;
 import lombok.Data;
 
+@Builder
 @Data
 public class MonthlyBreakdown {
     private String month;

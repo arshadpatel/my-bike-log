@@ -1,6 +1,8 @@
 package com.mybikelog.api.service;
 
+import com.mybikelog.api.dto.MonthlyBreakdown;
 import com.mybikelog.api.dto.MonthlyDashboradDTO;
+import com.mybikelog.api.dto.OverallStatsDTO;
 import com.mybikelog.api.entity.BikeEntity;
 import com.mybikelog.api.entity.PetrolEntity;
 import com.mybikelog.api.entity.RideEntity;
@@ -15,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -27,9 +30,12 @@ public class DashboardService {
     private final RideRepository rideRepository;
     private final PetrolRepository petrolRepository;
 
-    public List<String> getAllMonths(UUID userId, UUID bikeId) {
+    public List<String> getAllMonths(UUID userId, UUID bikeId){
         BikeEntity bike = commonService.getBikeDetails(userId, bikeId);
+        return getAllMonths(bike);
+    }
 
+    private List<String> getAllMonths(BikeEntity bike) {
         Set<String> months = new TreeSet<>(Comparator.reverseOrder());
 
         rideRepository.findDistinctDateByBikeId(bike.getId())
@@ -42,8 +48,12 @@ public class DashboardService {
         return new ArrayList<>(months);
     }
 
-    public MonthlyDashboradDTO getMonthlyDashboard(UUID userId, UUID bikeId, String month) {
+    public MonthlyDashboradDTO getMonthlyDashboard(UUID userId, UUID bikeId, String month){
         BikeEntity bike = commonService.getBikeDetails(userId, bikeId);
+        return getMonthlyDashboard(bike, month);
+    }
+
+    private MonthlyDashboradDTO getMonthlyDashboard(BikeEntity bike, String month) {
 
         YearMonth yearMonth = YearMonth.parse(month);
 
@@ -116,5 +126,51 @@ public class DashboardService {
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
+    }
+
+    public OverallStatsDTO getOverallStats(UUID userId, UUID bikeId) {
+        BikeEntity bike = commonService.getBikeDetails(userId, bikeId);
+
+        List<PetrolEntity> petrolEntries = petrolRepository.findByBikeId(bike.getId());
+
+        Double totalLitres = petrolRepository.findTopByBikeIdOrderByOdoDesc(bike.getId())
+                .map(PetrolEntity::getCumulativeLitres)
+                .orElse(0.0);
+
+        return OverallStatsDTO.builder()
+                .totalKm(bike.getCurrentOdo() - bike.getInitialOdo())
+                .totalLitres(totalLitres)
+                .totalSpend(calculateTotalSpend(petrolEntries))
+                .overallAvgMileage(calculateAverageMileage(petrolEntries))
+                .overallMaxMileage(findBestMileage(petrolEntries))
+                .monthlyBreakdown(buildMonthlyBreakdown(bike))
+                .build();
+    }
+
+    private Double calculateAverageMileage(List<PetrolEntity> petrolEntries) {
+        OptionalDouble avg = petrolEntries.stream()
+                .map(PetrolEntity::getMileageKmPerLitre)
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .average();
+        return avg.isPresent() ? avg.getAsDouble() : null;
+    }
+
+    private List<MonthlyBreakdown> buildMonthlyBreakdown(BikeEntity bike) {
+        List<MonthlyBreakdown> breakdowns = new ArrayList<>();
+
+        List<String> months = getAllMonths(bike);
+        for (String month : months) {
+            MonthlyDashboradDTO dashboard = getMonthlyDashboard(bike, month);
+
+            MonthlyBreakdown breakdown = MonthlyBreakdown.builder()
+                    .month(month)
+                    .km(dashboard.getKmDrivenThisMonth())
+                    .litres(dashboard.getLitresThisMonth())
+                    .spend(dashboard.getSpendThisMonth())
+                    .build();
+            breakdowns.add(breakdown);
+        }
+        return breakdowns;
     }
 }
