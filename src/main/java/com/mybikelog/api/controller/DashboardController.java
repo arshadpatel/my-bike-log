@@ -33,9 +33,12 @@ public class DashboardController {
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<MonthlyDashboradDTO> getMonthlyDashboard(@RequestParam String month,
+    public ResponseEntity<MonthlyDashboradDTO> getMonthlyDashboard(@AuthenticationPrincipal String id,
+                                                                   @RequestParam String month,
                                                                    @PathVariable String bikeId){
-        return null;
+        MonthlyDashboradDTO monthlyDashboradDTO = dashboardService.getMonthlyDashboard(
+                UUID.fromString(id), UUID.fromString(bikeId), month);
+        return ResponseEntity.ok(monthlyDashboradDTO);
     }
 
     @GetMapping("/overall-stats")
