@@ -36,11 +36,8 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
         response.setContentType("application/json");
 
-        response.getWriter().write("""
-            {
-                "token":"%s"
-            }
-            """.formatted(token));
+        String frontendUrl = "http://127.0.0.1:5500/index.html";
+        response.sendRedirect(frontendUrl + "?token=" + token);
 
     }
 }
