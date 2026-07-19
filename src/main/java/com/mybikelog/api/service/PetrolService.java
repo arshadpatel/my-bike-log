@@ -30,7 +30,8 @@ public class PetrolService {
 
     public PetrolDTO addPetrol(UUID userId, UUID bikeId, PetrolDTO petrolRequest) {
         BikeEntity bike = commonService.getBikeDetails(userId, bikeId);
-        if(petrolRequest.getOdo() < bike.getCurrentOdo()) throw new RuntimeException("Enter Correct Odometer Reading");
+        if(petrolRequest.getOdo() < ((bike.getCurrentOdo() != null) ?
+                bike.getCurrentOdo() : 0.0)) throw new RuntimeException("Enter Correct Odometer Reading");
 
         Optional<PetrolEntity> previousPetrolEntity = petrolRepository.findTopByBikeIdOrderByOdoDesc(bikeId);
 

@@ -138,7 +138,8 @@ public class DashboardService {
                 .orElse(0.0);
 
         return OverallStatsDTO.builder()
-                .totalKm(bike.getCurrentOdo() - bike.getInitialOdo())
+                .totalKm(((bike.getCurrentOdo() != null) ?
+                        bike.getCurrentOdo() : 0.0) - bike.getInitialOdo())
                 .totalLitres(totalLitres)
                 .totalSpend(calculateTotalSpend(petrolEntries))
                 .overallAvgMileage(calculateAverageMileage(petrolEntries))

@@ -29,7 +29,8 @@ public class RideService {
 
     public RideDTO addRide(UUID userId, UUID bikeId, RideDTO rideRequest) {
         BikeEntity bike = commonService.getBikeDetails(userId, bikeId);
-        if(rideRequest.getOdo() < bike.getCurrentOdo()) throw new RuntimeException("Enter Correct Odometer Reading");
+        if(rideRequest.getOdo() < ((bike.getCurrentOdo() != null) ?
+                bike.getCurrentOdo() : 0.0)) throw new RuntimeException("Enter Correct Odometer Reading");
         Optional<RideEntity> previousRide = rideRepository.findTopByBikeIdOrderByOdoDesc(bikeId);
         Double newOdo = rideRequest.getOdo();
         Double distance = null;
