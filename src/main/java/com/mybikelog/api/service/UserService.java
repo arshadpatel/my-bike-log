@@ -2,6 +2,7 @@ package com.mybikelog.api.service;
 
 import com.mybikelog.api.dto.UsersDTO;
 import com.mybikelog.api.entity.UserEntity;
+import com.mybikelog.api.exception.ResourceNotFoundException;
 import com.mybikelog.api.mapper.MapperClass;
 import com.mybikelog.api.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -17,16 +18,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final MapperClass mapperClass;
 
-    public UsersDTO getUser(UUID uuid){
+    public UsersDTO getUser(UUID userId){
 
-        UserEntity userEntity = userRepository.findById(uuid).orElse(null);
+        UserEntity userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         return mapperClass.toUsersDto(userEntity);
     }
 
-    public UsersDTO updateActiveBike(UUID uuid, UsersDTO usersDTO) {
+    public UsersDTO updateActiveBike(UUID userId, UsersDTO usersDTO) {
 
-        UserEntity userEntity = userRepository.getReferenceById(uuid);
+        UserEntity userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
         userEntity.setActiveBikeId(usersDTO.getActiveBikeId());
         UserEntity updatedUser = userRepository.save(userEntity);
 
