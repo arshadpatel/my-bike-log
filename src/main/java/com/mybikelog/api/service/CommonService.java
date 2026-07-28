@@ -3,6 +3,7 @@ package com.mybikelog.api.service;
 import com.mybikelog.api.entity.BikeEntity;
 import com.mybikelog.api.entity.PetrolEntity;
 import com.mybikelog.api.entity.RideEntity;
+import com.mybikelog.api.exception.ResourceNotFoundException;
 import com.mybikelog.api.repository.BikeRepository;
 import com.mybikelog.api.repository.PetrolRepository;
 import com.mybikelog.api.repository.RideRepository;
@@ -21,12 +22,12 @@ public class CommonService {
 
     public BikeEntity getBikeDetails(UUID userId, UUID bikeId){
         return bikeRepository.findByIdAndUserId(bikeId, userId)
-                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Bike not found with id: " + bikeId + " for the current user"));
     }
 
     public BikeEntity getBikeDetails(UUID bikeId){
         return bikeRepository.findById(bikeId)
-                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Bike not found with id: " + bikeId));
     }
 
     public void updateBikeCurrentOdo(BikeEntity bike) {

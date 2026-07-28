@@ -20,6 +20,7 @@ public class BikeService {
 
     private final UserRepository userRepository;
     private final BikeRepository bikeRepository;
+    private final CommonService commonService;
     private final MapperClass mapperClass;
 
     public List<BikeDTO> getAllBikes(UUID id) {
@@ -37,22 +38,17 @@ public class BikeService {
     }
 
     public BikeDTO getBike(UUID userId, UUID bikeId) {
-        BikeEntity bikeEntity = getBikeEntity(userId, bikeId);
+        BikeEntity bikeEntity = commonService.getBikeDetails(userId, bikeId);
         return mapperClass.toBikeDto(bikeEntity);
     }
 
     public BikeDTO updateBikeDetails(UUID userId, UUID bikeId, BikeDTO bikeRequest) {
-        BikeEntity fetchBikeDetails = getBikeEntity(userId, bikeId);
+        BikeEntity fetchBikeDetails = commonService.getBikeDetails(userId, bikeId);
         fetchBikeDetails.setName(bikeRequest.getName());
         fetchBikeDetails.setCurrentOdo(bikeRequest.getCurrentOdo());
         fetchBikeDetails.setInitialOdo(bikeRequest.getInitialOdo());
         fetchBikeDetails.setOilChangeIntervalKm(bikeRequest.getOilChangeIntervalKm());
         BikeEntity updatedBikeDetails = bikeRepository.save(fetchBikeDetails);
         return mapperClass.toBikeDto(updatedBikeDetails);
-    }
-
-    public BikeEntity getBikeEntity(UUID userId, UUID bikeId){
-        return bikeRepository.findByIdAndUserId(bikeId, userId)
-                .orElseThrow(() -> new RuntimeException("Bike Not Found"));
     }
 }

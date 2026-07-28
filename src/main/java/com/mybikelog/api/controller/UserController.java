@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,7 +28,7 @@ public class UserController {
 
     @PatchMapping
     public ResponseEntity<UsersDTO> updatePreference(@AuthenticationPrincipal String id,
-                                                     UsersDTO usersDTO){
+                                                     @RequestBody UsersDTO usersDTO){
         UsersDTO user= userService.updateActiveBike(UUID.fromString(id), usersDTO);
         return ResponseEntity.ok(user);
     }
