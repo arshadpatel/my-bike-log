@@ -120,5 +120,4 @@ class UserServiceTest {
         assertThat(result.getName()).isEqualTo("New User");
         verify(userRepository).save(any(UserEntity.class));
     }
-
 }
