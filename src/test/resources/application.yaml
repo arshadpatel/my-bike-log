@@ -1,0 +1,12 @@
+jwt:
+  secret: test-secret-key-at-least-32-bytes-long-for-hmac
+  expiration-time: 3600000
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret

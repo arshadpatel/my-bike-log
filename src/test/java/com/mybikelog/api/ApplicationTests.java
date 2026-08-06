@@ -1,4 +1,4 @@
-package com.mybikelog.Application;
+package com.mybikelog.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
