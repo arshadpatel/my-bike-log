@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bike Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- ══════════════ LOGIN SCREEN ══════════════ -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">🏍️</div>
+      <div class="login-title">BikeLog</div>
+      <div class="login-sub">Sign in to track your rides, fuel, and maintenance</div>
+      <a class="google-btn" id="google-login-btn" href="#">
+        <svg class="google-icon" viewBox="0 0 48 48">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" />
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+          <path fill="#4CAF50" d="M24 44c5.4 0 10.3-1.9 14.1-5.1l-6.5-5.5C29.5 35.5 26.9 36 24 36c-5.3 0-9.7-3.4-11.3-8.1l-6.6 5.1C9.6 39.6 16.2 44 24 44z" />
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.5 5.5C41.6 35.6 44 30.2 44 24c0-1.3-.1-2.7-.4-3.5z" />
+        </svg>
+        Sign in with Google
+      </a>
+      <div class="login-error" id="login-error"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ APP ══════════════ -->
+  <div class="app" id="app" style="display:none">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="logo">
+        <div class="logo-name">🏍️ BikeLog</div>
+        <div class="logo-sub" id="sidebar-odo">Loading…</div>
+      </div>
+
+      <!-- Bike switcher -->
+      <div class="bike-switcher">
+        <div class="bike-switcher-row">
+          <select id="bikeSelector" onchange="onBikeSwitch()"></select>
+          <button class="bike-switcher-add" id="add-bike-toggle" onclick="toggleAddBikeForm()" title="Add a bike">＋</button>
+          <button class="bike-switcher-add" id="delete-bike-btn" onclick="deleteBike()" title="Delete this bike">🗑</button>
+        </div>
+      </div>
+
+      <div class="add-bike-form" id="add-bike-form">
+        <div class="fg"><label>Bike name</label><input type="text" id="new-bike-name" placeholder="e.g. RE Classic 350"></div>
+        <div class="fg"><label>Initial odometer (km)</label><input type="number" id="new-bike-odo" placeholder="0" value="0"></div>
+        <div class="fg"><label>Oil change interval (km)</label><input type="number" id="new-bike-interval" placeholder="2000" value="2000"></div>
+        <div class="add-bike-form-actions">
+          <button class="btn btn-accent btn-sm" style="flex:1" onclick="createBike()">Add bike</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAddBikeForm()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Dashboard</div>
+        <div class="nav-item active" onclick="nav('dashboard', this)">
+          <span class="icon">📊</span> Monthly
+        </div>
+        <div class="nav-item" onclick="nav('overall', this)">
+          <span class="icon">📈</span> Overall
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Track</div>
+        <div class="nav-item" onclick="nav('rides', this)">
+          <span class="icon">🛣️</span> Ride History
+        </div>
+        <div class="nav-item" onclick="nav('petrol', this)">
+          <span class="icon">⛽</span> Petrol
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Maintenance</div>
+        <div class="nav-item" onclick="nav('oil', this)">
+          <span class="icon">🔧</span> Engine Oil
+        </div>
+        <div class="nav-item" onclick="nav('tyre', this)">
+          <span class="icon">🔵</span> Tyre Pressure
+        </div>
+        <div class="nav-item" onclick="nav('service', this)">
+          <span class="icon">🛠️</span> Service History
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-footer">
+          <img class="user-avatar" id="user-avatar" src="" alt="">
+          <div class="user-info">
+            <div class="user-name" id="user-name">—</div>
+            <div class="user-email" id="user-email">—</div>
+          </div>
+        </div>
+        <button class="btn btn-full" onclick="logout()" style="justify-content:center">Sign out</button>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="page-header">
+          <div class="page-title">Monthly Overview</div>
+          <div class="page-sub" id="dash-sub">Your riding stats for this month</div>
+        </div>
+
+        <div id="oil-banner-dash"></div>
+
+        <div class="month-row">
+          <span style="font-size:13px;color:var(--text2)">Month</span>
+          <select id="monthSelector" onchange="renderDashboard()"></select>
+        </div>
+
+        <div class="dash-circles">
+          <div class="big-ring">
+            <div class="ring-wrap">
+              <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8" />
+                <circle id="ring-km-arc" cx="50" cy="50" r="42" fill="none" stroke="#4a9eff" stroke-width="8"
+                  stroke-linecap="round" stroke-dasharray="0 264" />
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-val" id="mon-km" style="color:var(--blue)">0</div>
+                <div class="ring-unit">km</div>
+              </div>
+            </div>
+            <div class="ring-label">Driven this month</div>
+          </div>
+          <div class="big-ring">
+            <div class="ring-wrap">
+              <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8" />
+                <circle id="ring-petrol-arc" cx="50" cy="50" r="42" fill="none" stroke="#f0b429" stroke-width="8"
+                  stroke-linecap="round" stroke-dasharray="0 264" />
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-val" id="mon-litres" style="color:var(--yellow)">0</div>
+                <div class="ring-unit">litres</div>
+              </div>
+            </div>
+            <div class="ring-label">Petrol this month</div>
+          </div>
+        </div>
+
+        <div class="small-rings">
+          <div class="small-card">
+            <div class="sc-val" id="mon-current-mileage" style="color:var(--green)">—</div>
+            <div class="sc-lbl">current mileage (km/L)</div>
+          </div>
+          <div class="small-card">
+            <div class="sc-val" id="mon-max-mileage" style="color:var(--green)">—</div>
+            <div class="sc-lbl">best mileage (km/L)</div>
+          </div>
+          <div class="small-card">
+            <div class="sc-val" id="mon-spend">₹0</div>
+            <div class="sc-lbl">petrol spend</div>
+          </div>
+          <div class="small-card">
+            <div class="sc-val" id="mon-days">0</div>
+            <div class="sc-lbl">riding days</div>
+          </div>
+          <div class="small-card">
+            <div class="sc-val" id="mon-rides">0</div>
+            <div class="sc-lbl">total rides</div>
+          </div>
+          <div class="small-card">
+            <div class="sc-val" id="total-odo">0</div>
+            <div class="sc-lbl">odometer (km)</div>
+          </div>
+        </div>
+
+        <!-- Quick add forms -->
+        <div class="form-grid">
+          <div class="form-card">
+            <h3>🛣️ Log a ride</h3>
+            <div class="fg"><label>Date</label><input type="date" id="ride-date"></div>
+            <div class="fg"><label>Time</label><input type="time" id="ride-time"></div>
+            <div class="fg">
+              <label>Odometer reading (km)</label>
+              <input type="number" id="ride-odo" placeholder="e.g. 12540">
+              <div class="hint" id="ride-hint"></div>
+            </div>
+            <button class="btn btn-accent btn-full" onclick="addRide()">Add ride</button>
+          </div>
+
+          <div class="form-card">
+            <h3>⛽ Log petrol</h3>
+            <div class="fg"><label>Date</label><input type="date" id="petrol-date"></div>
+            <div class="fg"><label>Current odometer (km)</label><input type="number" id="petrol-odo"
+                placeholder="e.g. 12540"></div>
+            <div class="fg">
+              <label>Amount paid (₹)</label>
+              <input type="number" id="petrol-amount" placeholder="e.g. 330" oninput="updatePetrolHint()">
+              <div class="hint" id="petrol-calc-hint"></div>
+            </div>
+            <div class="fg">
+              <label>Price per litre (₹/L)</label>
+              <input type="number" id="petrol-price" value="115.81">
+            </div>
+            <button class="btn btn-accent btn-full" onclick="addPetrol()">Add petrol</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ OVERALL ══ -->
+      <div class="panel" id="panel-overall">
+        <div class="page-header">
+          <div class="page-title">Overall Stats</div>
+          <div class="page-sub">All-time performance across every month</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-tile">
+            <div class="num" id="ov-km">0 km</div>
+            <div class="desc">total km tracked</div>
+          </div>
+          <div class="stat-tile">
+            <div class="num" id="ov-litres">0 L</div>
+            <div class="desc">total petrol used</div>
+          </div>
+          <div class="stat-tile">
+            <div class="num" id="ov-spend">₹0</div>
+            <div class="desc">total petrol cost</div>
+          </div>
+          <div class="stat-tile">
+            <div class="num" id="ov-avg">—</div>
+            <div class="desc">overall km/litre</div>
+          </div>
+          <div class="stat-tile">
+            <div class="num" id="ov-max-mileage">—</div>
+            <div class="desc">best mileage of all time</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-title">Km driven per month</div>
+            <div class="chart-wrap" style="height:200px"><canvas id="chart-km" role="img"
+                aria-label="Monthly km driven bar chart">Monthly km data.</canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Petrol consumed per month (litres)</div>
+            <div class="chart-wrap" style="height:200px"><canvas id="chart-petrol" role="img"
+                aria-label="Monthly petrol chart">Monthly petrol data.</canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Petrol spend per month (₹)</div>
+            <div class="chart-wrap" style="height:200px"><canvas id="chart-spend" role="img"
+                aria-label="Monthly spend chart">Monthly spend data.</canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ RIDES ══ -->
+      <div class="panel" id="panel-rides">
+        <div class="page-header">
+          <div class="page-title">Ride History</div>
+          <div class="page-sub">Every ride logged with date, time, and distance</div>
+        </div>
+        <div class="filter-row">
+          <span style="font-size:13px;color:var(--text2)">Month</span>
+          <select id="ridesMonthFilter" onchange="onRidesMonthChange()">
+            <option value="">All months</option>
+          </select>
+        </div>
+        <div class="card">
+          <div id="rides-table"></div>
+          <div class="pagination" id="rides-pagination"></div>
+        </div>
+      </div>
+
+      <!-- ══ PETROL ══ -->
+      <div class="panel" id="panel-petrol">
+        <div class="page-header">
+          <div class="page-title">Petrol Log</div>
+          <div class="page-sub">All fill-ups with odometer, litres, cost, and mileage since last fill</div>
+        </div>
+        <div class="filter-row">
+          <span style="font-size:13px;color:var(--text2)">Month</span>
+          <select id="petrolMonthFilter" onchange="onPetrolMonthChange()">
+            <option value="">All months</option>
+          </select>
+        </div>
+        <div class="card">
+          <div id="petrol-table"></div>
+          <div class="pagination" id="petrol-pagination"></div>
+        </div>
+      </div>
+
+      <!-- ══ ENGINE OIL ══ -->
+      <div class="panel" id="panel-oil">
+        <div class="page-header">
+          <div class="page-title">Engine Oil</div>
+          <div class="page-sub" id="oil-sub">Change reminder based on your bike's interval</div>
+        </div>
+
+        <div id="oil-banner-main"></div>
+
+        <div class="form-card" style="margin-bottom:1.5rem">
+          <h3>🔧 Record an oil change</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+            <div class="fg"><label>Date</label><input type="date" id="oil-date"></div>
+            <div class="fg">
+              <label>Odometer at change (km)</label>
+              <input type="number" id="oil-odo" placeholder="e.g. 12540">
+            </div>
+          </div>
+          <div class="fg"><label>Notes (oil type, brand, etc.)</label><input type="text" id="oil-notes"
+              placeholder="e.g. Motul 10W-30 semi-synthetic"></div>
+          <button class="btn btn-accent" onclick="addOilChange()">Save oil change</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Oil change history</div>
+          <div id="oil-table"></div>
+        </div>
+      </div>
+
+      <!-- ══ TYRE ══ -->
+      <div class="panel" id="panel-tyre">
+        <div class="page-header">
+          <div class="page-title">Tyre Pressure</div>
+          <div class="page-sub">Log when you last checked and filled each tyre</div>
+        </div>
+
+        <div class="tyre-grid" style="margin-bottom:1.5rem">
+          <div class="tyre-card">
+            <div class="tyre-icon">⬆️</div>
+            <div class="tyre-label">Front Tyre</div>
+            <div class="tyre-date" id="tyre-front-date">Never recorded</div>
+            <div class="tyre-note" id="tyre-front-note"></div>
+          </div>
+          <div class="tyre-card">
+            <div class="tyre-icon">⬇️</div>
+            <div class="tyre-label">Rear Tyre</div>
+            <div class="tyre-date" id="tyre-rear-date">Never recorded</div>
+            <div class="tyre-note" id="tyre-rear-note"></div>
+          </div>
+        </div>
+
+        <div class="form-card" style="margin-bottom:1.5rem">
+          <h3>🔵 Record pressure check</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+            <div class="fg"><label>Date</label><input type="date" id="tyre-date"></div>
+            <div class="fg">
+              <label>Tyre</label>
+              <select id="tyre-which"
+                style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:inherit;font-size:13px">
+                <option value="front">Front</option>
+                <option value="rear">Rear</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+            <div class="fg"><label>Pressure (PSI)</label><input type="number" id="tyre-psi" placeholder="e.g. 32"></div>
+          </div>
+          <div class="fg"><label>Notes</label><input type="text" id="tyre-notes"
+              placeholder="e.g. Filled at petrol station"></div>
+          <button class="btn btn-accent" onclick="addTyreCheck()">Save</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Pressure log</div>
+          <div id="tyre-table"></div>
+        </div>
+      </div>
+
+      <!-- ══ SERVICE ══ -->
+      <div class="panel" id="panel-service">
+        <div class="page-header">
+          <div class="page-title">Service History</div>
+          <div class="page-sub">Full maintenance record for your bike</div>
+        </div>
+
+        <div class="form-card" style="margin-bottom:1.5rem">
+          <h3>🛠️ Add service record</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+            <div class="fg"><label>Date</label><input type="date" id="svc-date"></div>
+            <div class="fg"><label>Odometer (km)</label><input type="number" id="svc-odo" placeholder="e.g. 12540">
+            </div>
+            <div class="fg"><label>Cost (₹)</label><input type="number" id="svc-cost" placeholder="e.g. 850"></div>
+          </div>
+          <div class="fg"><label>Service type / title</label><input type="text" id="svc-title"
+              placeholder="e.g. Full service, chain lube, brake pad replace…"></div>
+          <div class="fg"><label>Details / notes</label><textarea id="svc-notes"
+              placeholder="What was done, parts replaced, mechanic name, etc."></textarea></div>
+          <div class="fg"><label>Workshop / garage</label><input type="text" id="svc-shop"
+              placeholder="e.g. Royal Service Center, Hyderabad"></div>
+          <button class="btn btn-accent" onclick="addService()">Save service record</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Service records</div>
+          <div id="service-list"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
