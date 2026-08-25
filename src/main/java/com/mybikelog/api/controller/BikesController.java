@@ -3,6 +3,7 @@ package com.mybikelog.api.controller;
 import com.mybikelog.api.dto.BikeDTO;
 import com.mybikelog.api.service.BikeService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @AllArgsConstructor
 @RequestMapping("/bikes")
@@ -26,7 +28,9 @@ public class BikesController {
 
     @GetMapping
     public ResponseEntity<List<BikeDTO>> getAllBikes(@AuthenticationPrincipal String id){
+        log.info("Fetching all bikes for user={}", id);
         List<BikeDTO> bikeList = bikeService.getAllBikes(UUID.fromString(id));
+        log.debug("Fetched {} bikes for user={}", bikeList.size(), id);
         return ResponseEntity.ok(bikeList);
     }
 

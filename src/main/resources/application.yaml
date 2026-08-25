@@ -12,3 +12,8 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration-time: 3600000
+
+logging:
+  level:
+    root: INFO
+    com.mybikelog.api : DEBUG
