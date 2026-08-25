@@ -7,6 +7,7 @@ import com.mybikelog.api.mapper.MapperClass;
 import com.mybikelog.api.repository.BikeRepository;
 import com.mybikelog.api.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @AllArgsConstructor
 @Service
 public class BikeService {
@@ -24,6 +26,7 @@ public class BikeService {
     private final MapperClass mapperClass;
 
     public List<BikeDTO> getAllBikes(UUID id) {
+        log.debug("Fetching bikes for user={}", id);
         List<BikeEntity> bikeList = bikeRepository.findByUserId(id);
         return mapperClass.toListBikeDto(bikeList);
     }
