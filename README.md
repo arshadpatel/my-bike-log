@@ -2,7 +2,7 @@
 
 BikeLog is a multi-user motorcycle logbook. It replaces a single-page, `localStorage`-based HTML app with a proper **Spring Boot + JPA backend**, secured by **Google OAuth 2.0** and **JWT**, so multiple people can each track their own bikes: rides, fuel fill-ups, oil changes, tyre pressure, service history, and monthly/overall statistics.
 
-> **Status:** Actively developed, pre-1.0. Core ride/fuel tracking and the dashboard work end-to-end; several modules described in the API contract (oil changes, tyre checks, service history, oil/tyre status widgets) are still stubs. See [Project Status & Roadmap](#-project-status--roadmap) below — this is intentional, so the project has a clear on-ramp for contributors.
+> **Frontend:** The original `frontend/` folder in this repo is being superseded by a standalone React implementation — see [my-bike-log-frontend](https://github.com/arshadpatel/my-bike-log-frontend). Contributions welcome there too!
 
 ---
 
